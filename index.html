@@ -11,18 +11,12 @@
             fetch(url)
                 .then(response => response.text())
                 .then(html => {
-                    var tempElement = document.createElement('div');
-                    tempElement.innerHTML = html;
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
 
-                    var textContent = tempElement.textContent || tempElement.innerText;
-
-                    if (textContent.trim() === 'M') {
-                        window.location.href = 'https://dark-shadowblade.github.io/MSEdgeSearchClickerabhishek/';
-                    } else if (textContent.trim() === 'D') {
-                        window.location.href = 'https://msbing-one.github.io/Hello-group-/';
-                    } else {
-                        document.getElementById('output').innerText = textContent;
-                    }
+                    // Extract and display the text content
+                    var textContent = doc.body.textContent || doc.body.innerText;
+                    document.getElementById('output').innerText = textContent.trim();
                 })
                 .catch(error => {
                     console.error('Error reading text:', error);
