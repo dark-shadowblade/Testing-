@@ -14,15 +14,16 @@
                     var parser = new DOMParser();
                     var doc = parser.parseFromString(html, 'text/html');
 
-                    // Extract and display the text content
-                    var textContent = doc.body.textContent || doc.body.innerText;
+                    // Get the text content of the target element
+                    var targetText = doc.getElementById('targetElementId').textContent.trim();
 
-                    if (textContent.trim() === 'M') {
-                        window.location.href = 'https://dark-shadowblade.github.io/MSEdgeSearchClickerabhishek/';
-                    } else if (textContent.trim() === 'D') {
-                        window.location.href = 'https://msbing-one.github.io/Hello-group-/';
+                    // Process the text content as needed
+                    if (targetText === 'M') {
+                        window.location.href = 'www.google.com';
+                    } else if (targetText === 'D') {
+                        window.location.href = 'www.bing.com';
                     } else {
-                        document.getElementById('output').innerText = textContent.trim();
+                        document.getElementById('output').innerText = targetText;
                     }
                 })
                 .catch(error => {
@@ -30,16 +31,13 @@
                 });
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             readText();
         });
     </script>
 </head>
 <body>
-
     <h1>Read Text from Another HTML</h1>
-
     <div id="output"></div>
-
 </body>
 </html>
