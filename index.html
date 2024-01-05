@@ -16,7 +16,14 @@
 
                     // Extract and display the text content
                     var textContent = doc.body.textContent || doc.body.innerText;
-                    document.getElementById('output').innerText = textContent.trim();
+
+                    if (textContent.trim() === 'M') {
+                        window.location.href = 'webisteone.html';
+                    } else if (textContent.trim() === 'D') {
+                        window.location.href = 'websitetwo.html';
+                    } else {
+                        document.getElementById('output').innerText = textContent.trim();
+                    }
                 })
                 .catch(error => {
                     console.error('Error reading text:', error);
