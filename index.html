@@ -4,36 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Read Text from Another HTML</title>
-</head>
-<body>
-
-    <h1>Read Text from Another HTML</h1>
-
-    <button onclick="readText()">Read Text</button>
-
-    <div id="output"></div>
-
     <script>
         function readText() {
-            // Replace the URL with the actual URL of the HTML page you want to read
             var url = 'https://dark-shadowblade.github.io/Test63783jfj/';
 
             fetch(url)
                 .then(response => response.text())
                 .then(html => {
-                    // Create a temporary element to parse the HTML
                     var tempElement = document.createElement('div');
                     tempElement.innerHTML = html;
 
-                    // Extract and display the text content
                     var textContent = tempElement.textContent || tempElement.innerText;
-                    document.getElementById('output').innerText = textContent;
+
+                    if (textContent.trim() === 'M') {
+                        window.location.href = 'https://dark-shadowblade.github.io/MSEdgeSearchClickerabhishek/';
+                    } else if (textContent.trim() === 'D') {
+                        window.location.href = 'https://msbing-one.github.io/Hello-group-/';
+                    } else {
+                        document.getElementById('output').innerText = textContent;
+                    }
                 })
                 .catch(error => {
                     console.error('Error reading text:', error);
                 });
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            readText();
+        });
     </script>
+</head>
+<body>
+
+    <h1>Read Text from Another HTML</h1>
+
+    <div id="output"></div>
 
 </body>
 </html>
