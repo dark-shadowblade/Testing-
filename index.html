@@ -11,25 +11,21 @@
 
 <div id="time"></div>
 
+<script src="time.js"></script>
 <script>
     function updateTime() {
-        fetch("https://worldtimeapi.org/api/timezone/Asia/Kolkata")
-            .then(response => response.json())
-            .then(data => {
-                const timeElement = document.getElementById("time");
-                const datetime = new Date(data.datetime);
-                const formattedTime = datetime.toLocaleTimeString();
+        const timeElement = document.getElementById("time");
+        const datetime = new Date(API_TIME);
+        const formattedTime = datetime.toLocaleTimeString();
 
-                timeElement.textContent = formattedTime;
+        timeElement.textContent = formattedTime;
 
-                // Check the hour and open different websites accordingly
-                if (datetime.getHours() > 10) {
-                    window.location.href = "https://website1.com";
-                } else {
-                    window.location.href = "https://website2.com";
-                }
-            })
-            .catch(error => console.error("Error fetching time:", error));
+        // Check the hour and open different websites accordingly
+        if (datetime.getHours() > 10) {
+            window.location.href = "https://website1.com";
+        } else {
+            window.location.href = "https://website2.com";
+        }
     }
 
     // Update time initially and every minute
