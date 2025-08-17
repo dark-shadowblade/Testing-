@@ -1,9 +1,9 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapters Viewer & PDF Converter</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
@@ -36,8 +36,7 @@
       font-size: 20px;
       color: #ffcc00;
     }
-    input,
-    button {
+    input, button {
       margin: 8px;
       padding: 10px;
       font-size: 16px;
@@ -59,29 +58,29 @@
     .chapter-form {
       margin-bottom: 15px;
     }
-    .note {
-      font-size: 12px;
-      color: #bbbbbb;
-      margin-top: -4px;
-    }
   </style>
 </head>
 <body>
-  <h1>Chapters Viewer</h1>  <div class="chapter-form">
-    <input type="text" id="baseUrl" placeholder="Base URL (e.g., https://example.com/ch1-)" required />
-    <input type="number" id="totalPages" placeholder="Number of pages" required />
-    <button id="loadBtn" onclick="loadChapter()">Load Chapter</button>
-  </div><button id="pdfBtn" onclick="downloadPDF()">Download All as PDF</button>
+  <h1>Chapters Viewer</h1>
+  
+  <div class="chapter-form">
+    <input type="text" id="baseUrl" placeholder="Base URL (e.g., https://example.com/ch1-)" required>
+    <input type="number" id="totalPages" placeholder="Number of pages" required>
+    <button onclick="loadChapter()">Load Chapter</button>
+  </div>
+  
+  <button onclick="downloadPDF()">Download All as PDF</button>
 
-  <div class="note">If PDF is blank, your image host may block cross-origin use (CORS).</div>  <div class="container" id="imageContainer">
+  <div class="container" id="imageContainer">
     <h2>Enter details and click 'Load Chapter'</h2>
-  </div>  <script>
+  </div>
+
+  <script>
     let imageElements = [];
     let chapterCounter = 0; // keeps track of chapter numbers
 
     async function loadChapter() {
       const container = document.getElementById('imageContainer');
-      const loadBtn = document.getElementById('loadBtn');
 
       let baseUrl = document.getElementById('baseUrl').value.trim();
       const totalPages = parseInt(document.getElementById('totalPages').value);
@@ -92,38 +91,29 @@
         return;
       }
 
-      // Remove the initial hint if present
-      const firstChild = container.firstElementChild;
-      if (firstChild && firstChild.tagName === 'H2' && firstChild.textContent.includes("Enter details")) {
-        container.removeChild(firstChild);
-      }
-
       chapterCounter++; // increment chapter number
-      const chapterName = `Chapter ${chapterCounter}`;
+      let chapterName = `Chapter ${chapterCounter}`;
 
       console.log(`Loading ${chapterName}...`);
 
       // Add chapter heading
-      const heading = document.createElement('h2');
-      heading.className = 'chapter-title';
+      let heading = document.createElement("h2");
+      heading.className = "chapter-title";
       heading.textContent = chapterName;
       container.appendChild(heading);
 
       let loadedImages = 0;
 
-      loadBtn.disabled = true;
-
       for (let page = 1; page <= totalPages; page++) {
-        const img = document.createElement('img');
+        let img = document.createElement('img');
         img.alt = `${chapterName} - Page ${page}`;
         
-
         let found = false;
 
-        for (const format of formats) {
-          const testSrc = `${baseUrl}${page}.${format}`;
-          const exists = await checkImageExists(testSrc);
-
+        for (let format of formats) {
+          let testSrc = `${baseUrl}${page}.${format}`;
+          let exists = await checkImageExists(testSrc);
+          
           if (exists) {
             img.src = testSrc;
             container.appendChild(img);
@@ -136,7 +126,7 @@
         }
 
         if (!found) {
-          const errorText = document.createElement('p');
+          let errorText = document.createElement('p');
           errorText.style.color = 'red';
           errorText.textContent = `Image not found: ${chapterName} - Page ${page}`;
           container.appendChild(errorText);
@@ -147,74 +137,60 @@
       if (loadedImages === 0) {
         alert(`No images were loaded for ${chapterName}. Please check your URL.`);
       }
-
-      loadBtn.disabled = false;
     }
 
     function checkImageExists(url) {
       return new Promise((resolve) => {
-        const testImg = new Image();
-        
-        testImg.onload = () => resolve(true);
-        testImg.onerror = () => resolve(false);
-        testImg.src = url;
+        let img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url;
       });
     }
 
     async function downloadPDF() {
       if (imageElements.length === 0) {
-        alert('No chapters loaded. Please load at least one.');
+        alert("No chapters loaded. Please load at least one.");
         return;
       }
 
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      let pdf = new jsPDF('p', 'mm', 'a4');
+      let imgWidth = 210;
+      let pageHeight = 297;
 
       console.log(`Processing ${imageElements.length} images...`);
 
-      let pagesAdded = 0;
-
       for (let i = 0; i < imageElements.length; i++) {
-        const img = imageElements[i].element;
+        let { element: img } = imageElements[i];
 
-        if (img.decode) {
-          try { await img.decode(); } catch (e) {}
-        }
+        // Fetch the image as blob
+        let response = await fetch(img.src);
+        let blob = await response.blob();
 
-        try {
-          const canvas = await html2canvas(img, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff'
-          });
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        // Convert blob to DataURL
+        let reader = new FileReader();
+        let dataURL = await new Promise(resolve => {
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
 
-          const renderW = canvas.width;
-          const renderH = canvas.height;
-          const ratio = Math.min(pageWidth / renderW, pageHeight / renderH);
-          const outW = renderW * ratio;
-          const outH = renderH * ratio;
+        // Create an image to get size ratio
+        let tempImg = new Image();
+        await new Promise(resolve => {
+          tempImg.onload = resolve;
+          tempImg.src = dataURL;
+        });
 
-          if (pagesAdded > 0) pdf.addPage();
-          const x = (pageWidth - outW) / 2;
-          const y = (pageHeight - outH) / 2;
-          pdf.addImage(dataUrl, 'JPEG', x, y, outW, outH);
-          pagesAdded++;
-        } catch (err) {
-          console.error('Failed to add image to PDF:', img.src, err);
-          alert('Some images could not be added to the PDF.');
-        }
+        let imgHeight = (tempImg.height * imgWidth) / tempImg.width;
+
+        if (i > 0) pdf.addPage();
+        pdf.addImage(dataURL, 'JPEG', 0, 0, imgWidth, imgHeight);
       }
 
-      if (pagesAdded === 0) {
-        alert('No pages were added to the PDF.');
-        return;
-      }
-
-      pdf.save('Chapters.pdf');
-      console.log('PDF Downloaded.');
+      pdf.save("Chapters.pdf");
+      console.log("PDF Downloaded.");
     }
-  </script></body>
+  </script>
+</body>
 </html>
