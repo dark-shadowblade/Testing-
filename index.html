@@ -1,18 +1,220 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Auto Redirect</title>
-  <script>
-    function openNewTab() {
-      window.open('https://www.google.com', '_blank');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapters Viewer & PDF Converter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #121212;
+      color: #ffffff;
+      text-align: center;
     }
-
-    setInterval(openNewTab, 1 ); // 5000 milliseconds = 5 seconds
-  </script>
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    }
+    h1 {
+      margin: 20px;
+      font-size: 24px;
+      color: #f5f5f5;
+    }
+    h2.chapter-title {
+      margin: 30px 0 15px;
+      font-size: 20px;
+      color: #ffcc00;
+    }
+    input,
+    button {
+      margin: 8px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+    }
+    input {
+      width: 80%;
+      max-width: 400px;
+    }
+    button {
+      background: #ff4081;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #e91e63;
+    }
+    .chapter-form {
+      margin-bottom: 15px;
+    }
+    .note {
+      font-size: 12px;
+      color: #bbbbbb;
+      margin-top: -4px;
+    }
+  </style>
 </head>
 <body>
-  <!-- Your content here -->
-</body>
+  <h1>Chapters Viewer</h1>  <div class="chapter-form">
+    <input type="text" id="baseUrl" placeholder="Base URL (e.g., https://example.com/ch1-)" required />
+    <input type="number" id="totalPages" placeholder="Number of pages" required />
+    <button id="loadBtn" onclick="loadChapter()">Load Chapter</button>
+  </div><button id="pdfBtn" onclick="downloadPDF()">Download All as PDF</button>
+
+  <div class="note">If PDF is blank, your image host may block cross-origin use (CORS).</div>  <div class="container" id="imageContainer">
+    <h2>Enter details and click 'Load Chapter'</h2>
+  </div>  <script>
+    let imageElements = [];
+    let chapterCounter = 0; // keeps track of chapter numbers
+
+    async function loadChapter() {
+      const container = document.getElementById('imageContainer');
+      const loadBtn = document.getElementById('loadBtn');
+
+      let baseUrl = document.getElementById('baseUrl').value.trim();
+      const totalPages = parseInt(document.getElementById('totalPages').value);
+      const formats = ["jpg", "jpeg", "png", "webp"];
+
+      if (!baseUrl || isNaN(totalPages) || totalPages <= 0) {
+        alert("Please enter valid Base URL and Number of Pages.");
+        return;
+      }
+
+      // Remove the initial hint if present
+      const firstChild = container.firstElementChild;
+      if (firstChild && firstChild.tagName === 'H2' && firstChild.textContent.includes("Enter details")) {
+        container.removeChild(firstChild);
+      }
+
+      chapterCounter++; // increment chapter number
+      const chapterName = `Chapter ${chapterCounter}`;
+
+      console.log(`Loading ${chapterName}...`);
+
+      // Add chapter heading
+      const heading = document.createElement('h2');
+      heading.className = 'chapter-title';
+      heading.textContent = chapterName;
+      container.appendChild(heading);
+
+      let loadedImages = 0;
+
+      loadBtn.disabled = true;
+
+      for (let page = 1; page <= totalPages; page++) {
+        const img = document.createElement('img');
+        img.alt = `${chapterName} - Page ${page}`;
+        img.crossOrigin = 'anonymous';
+
+        let found = false;
+
+        for (const format of formats) {
+          const testSrc = `${baseUrl}${page}.${format}`;
+          const exists = await checkImageExists(testSrc);
+
+          if (exists) {
+            img.src = testSrc;
+            container.appendChild(img);
+            imageElements.push({ chapter: chapterName, element: img });
+            loadedImages++;
+            found = true;
+            console.log(`Loaded: ${testSrc}`);
+            break;
+          }
+        }
+
+        if (!found) {
+          const errorText = document.createElement('p');
+          errorText.style.color = 'red';
+          errorText.textContent = `Image not found: ${chapterName} - Page ${page}`;
+          container.appendChild(errorText);
+          console.error(`No valid format found for ${chapterName} - Page ${page}`);
+        }
+      }
+
+      if (loadedImages === 0) {
+        alert(`No images were loaded for ${chapterName}. Please check your URL.`);
+      }
+
+      loadBtn.disabled = false;
+    }
+
+    function checkImageExists(url) {
+      return new Promise((resolve) => {
+        const testImg = new Image();
+        testImg.crossOrigin = 'anonymous';
+        testImg.onload = () => resolve(true);
+        testImg.onerror = () => resolve(false);
+        testImg.src = url;
+      });
+    }
+
+    async function downloadPDF() {
+      if (imageElements.length === 0) {
+        alert('No chapters loaded. Please load at least one.');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      console.log(`Processing ${imageElements.length} images...`);
+
+      let pagesAdded = 0;
+
+      for (let i = 0; i < imageElements.length; i++) {
+        const img = imageElements[i].element;
+
+        if (img.decode) {
+          try { await img.decode(); } catch (e) {}
+        }
+
+        try {
+          const canvas = await html2canvas(img, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+          });
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+          const renderW = canvas.width;
+          const renderH = canvas.height;
+          const ratio = Math.min(pageWidth / renderW, pageHeight / renderH);
+          const outW = renderW * ratio;
+          const outH = renderH * ratio;
+
+          if (pagesAdded > 0) pdf.addPage();
+          const x = (pageWidth - outW) / 2;
+          const y = (pageHeight - outH) / 2;
+          pdf.addImage(dataUrl, 'JPEG', x, y, outW, outH);
+          pagesAdded++;
+        } catch (err) {
+          console.error('Failed to add image to PDF:', img.src, err);
+          alert('Some images could not be added to the PDF.');
+        }
+      }
+
+      if (pagesAdded === 0) {
+        alert('No pages were added to the PDF.');
+        return;
+      }
+
+      pdf.save('Chapters.pdf');
+      console.log('PDF Downloaded.');
+    }
+  </script></body>
 </html>
