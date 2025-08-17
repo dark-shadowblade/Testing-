@@ -116,7 +116,7 @@
       for (let page = 1; page <= totalPages; page++) {
         const img = document.createElement('img');
         img.alt = `${chapterName} - Page ${page}`;
-        img.crossOrigin = 'anonymous';
+        
 
         let found = false;
 
@@ -154,7 +154,7 @@
     function checkImageExists(url) {
       return new Promise((resolve) => {
         const testImg = new Image();
-        testImg.crossOrigin = 'anonymous';
+        
         testImg.onload = () => resolve(true);
         testImg.onerror = () => resolve(false);
         testImg.src = url;
