@@ -1,196 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapters Viewer & PDF Converter</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <meta charset="utf-8" />
+  <title>Link/Code Reader & Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #121212;
-      color: #ffffff;
-      text-align: center;
+    :root { --bg:#0b1220; --card:#121a2b; --ink:#eaf0ff; --muted:#a9b3c9; --accent:#7aa2ff; --ok:#3ddc97; --bad:#ff6b6b; }
+    html,body { height:100%; background:var(--bg); color:var(--ink); margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji"; }
+    .wrap { max-width: 980px; margin: 24px auto; padding: 0 16px; }
+    .card { background: var(--card); border: 1px solid #23314f; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    header { padding: 20px 20px 0; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p.sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 0 20px 20px; }
+    input[type="url"], input[type="text"] {
+      background: #0f172a; color: var(--ink); border: 1px solid #32425f; border-radius: 12px;
+      padding: 12px 14px; font-size: 14px; outline: none;
     }
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-    }
-    img {
-      max-width: 100%;
-      height: auto;
-      margin-bottom: 5px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-    }
-    h1 {
-      margin: 20px;
-      font-size: 24px;
-      color: #f5f5f5;
-    }
-    h2.chapter-title {
-      margin: 30px 0 15px;
-      font-size: 20px;
-      color: #ffcc00;
-    }
-    input, button {
-      margin: 8px;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-    }
-    input {
-      width: 80%;
-      max-width: 400px;
-    }
+    input[type="url"]:focus, input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(122,162,255,.25); }
     button {
-      background: #ff4081;
-      color: white;
-      cursor: pointer;
+      background: var(--accent); border: none; color: #0c1220; font-weight: 700; border-radius: 12px;
+      padding: 0 16px; cursor: pointer; font-size: 14px;
     }
-    button:hover {
-      background: #e91e63;
-    }
-    .chapter-form {
-      margin-bottom: 15px;
-    }
+    button.secondary { background: #1c2742; color: var(--ink); border: 1px solid #2b3960; }
+    .grid { display: grid; grid-template-columns: 1fr 360px; gap: 16px; padding: 0 20px 20px; }
+    @media (max-width: 900px){ .grid { grid-template-columns: 1fr; } }
+    .panel { background: #0f172a; border: 1px solid #273452; border-radius: 12px; overflow: hidden; }
+    .panel h3 { margin: 0; padding: 12px 14px; border-bottom: 1px solid #273452; font-size: 14px; background: #0c152c; }
+    .panel .body { padding: 12px 14px; max-height: 60vh; overflow: auto; }
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 10px; font-size: 13px; }
+    .muted { color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .status { padding: 8px 12px; border-radius: 10px; font-size: 12px; display: inline-block; }
+    .ok { background: rgba(61,220,151,.15); color: var(--ok); border: 1px solid rgba(61,220,151,.35); }
+    .bad { background: rgba(255,107,107,.15); color: var(--bad); border: 1px solid rgba(255,107,107,.35); }
+    iframe.viewer { width: 100%; height: 70vh; border: 0; background: white; }
+    .textout { white-space: pre-wrap; word-break: break-word; }
+    .code { white-space: pre; overflow: auto; }
+    .footer { padding: 10px 20px 20px; color: var(--muted); font-size: 12px; }
+    .btns { display:flex; gap:8px; align-items:center; }
   </style>
 </head>
 <body>
-  <h1>Chapters Viewer</h1>
-  
-  <div class="chapter-form">
-    <input type="text" id="baseUrl" placeholder="Base URL (e.g., https://example.com/ch1-)" required>
-    <input type="number" id="totalPages" placeholder="Number of pages" required>
-    <button onclick="loadChapter()">Load Chapter</button>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <h1>Link / Code Reader</h1>
+        <p class="sub">Paste a link (URL) or a URL containing a <span class="mono">code</span> parameter. I’ll extract it and try to display the content.</p>
+      </header>
+
+      <div class="row">
+        <input id="urlInput" type="url" placeholder="https://example.com/resource or https://site.com?code=ABC123" spellcheck="false" />
+        <div class="btns">
+          <button id="loadBtn">Load</button>
+          <button id="pasteBtn" class="secondary" title="Paste from clipboard">Paste</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <section class="panel">
+          <h3>Preview</h3>
+          <div class="body" id="previewBody">
+            <p class="muted">Result will appear here. Images and PDFs will render directly. For HTML pages blocked by CORS, a sandboxed iframe will be used.</p>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <h3>Details</h3>
+          <div class="body">
+            <div class="kv">
+              <div class="muted">Input URL</div>
+              <div class="mono" id="info-url">—</div>
+
+              <div class="muted">Extracted “code”</div>
+              <div class="mono" id="info-code">—</div>
+
+              <!-- New fields -->
+              <div class="muted">Gallery ID</div>
+              <div class="mono" id="info-gallery">—</div>
+
+              <div class="muted">Pages</div>
+              <div class="mono" id="info-pages">—</div>
+
+              <div class="muted">Content-Type</div>
+              <div class="mono" id="info-ctype">—</div>
+
+              <div class="muted">Status</div>
+              <div id="info-status"><span class="status">Waiting</span></div>
+            </div>
+
+            <hr style="border:0;border-top:1px solid #273452;margin:12px 0" />
+
+            <div>
+              <div class="muted" style="margin-bottom:6px;">Raw/Decoded Output</div>
+              <div id="raw" class="mono code"></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="footer">
+        Tip: You can also open this file with <span class="mono">?link=&lt;URL-ENCODED&gt;</span> in the address bar to auto-load.
+      </div>
+    </div>
   </div>
-  
-  <button onclick="downloadPDF()">Download All as PDF</button>
 
-  <div class="container" id="imageContainer">
-    <h2>Enter details and click 'Load Chapter'</h2>
-  </div>
+<script>
+(function(){
+  const el = (id)=>document.getElementById(id);
+  const urlInput = el('urlInput');
+  const loadBtn = el('loadBtn');
+  const pasteBtn = el('pasteBtn');
+  const infoUrl = el('info-url');
+  const infoCode = el('info-code');
+  const infoGallery = el('info-gallery');
+  const infoPages = el('info-pages');
+  const infoCType = el('info-ctype');
+  const infoStatus = el('info-status');
+  const previewBody = el('previewBody');
+  const raw = el('raw');
 
-  <script>
-    let imageElements = [];
-    let chapterCounter = 0; // keeps track of chapter numbers
+  function setStatus(kind, text){
+    infoStatus.innerHTML = `<span class="status ${kind==='ok'?'ok':'bad'}">${text}</span>`;
+  }
+  function resetUI(){
+    infoUrl.textContent = '—';
+    infoCode.textContent = '—';
+    infoGallery.textContent = '—';
+    infoPages.textContent = '—';
+    infoCType.textContent = '—';
+    setStatus('', 'Waiting');
+    previewBody.innerHTML = `<p class="muted">Result will appear here.</p>`;
+    raw.textContent = '';
+  }
 
-    async function loadChapter() {
-      const container = document.getElementById('imageContainer');
+  function extractCode(u){
+    try{
+      const url = new URL(u);
+      const c = url.searchParams.get('code');
+      return c || '';
+    }catch(e){
+      return '';
+    }
+  }
 
-      let baseUrl = document.getElementById('baseUrl').value.trim();
-      const totalPages = parseInt(document.getElementById('totalPages').value);
-      const formats = ["jpg", "jpeg", "png", "webp"];
+  function looksLikeDataURL(s){
+    return typeof s === 'string' && s.startsWith('data:');
+  }
 
-      if (!baseUrl || isNaN(totalPages) || totalPages <= 0) {
-        alert("Please enter valid Base URL and Number of Pages.");
+  function guessIsImage(mime, url){
+    if(mime && mime.startsWith('image/')) return true;
+    try{
+      const u = new URL(url);
+      return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(u.pathname);
+    }catch(e){ return false; }
+  }
+
+  function guessIsPDF(mime, url){
+    if(mime === 'application/pdf') return true;
+    try{
+      const u = new URL(url);
+      return /\.pdf(\?|#|$)/i.test(u.pathname);
+    }catch(e){ return false; }
+  }
+
+  function showIframe(url){
+    previewBody.innerHTML = '';
+    const frame = document.createElement('iframe');
+    frame.className = 'viewer';
+    frame.referrerPolicy = 'no-referrer';
+    frame.sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups';
+    frame.src = url;
+    previewBody.appendChild(frame);
+  }
+
+  function showImage(src, alt='Image'){
+    previewBody.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = alt;
+    img.style.maxWidth = '100%';
+    img.style.height = 'auto';
+    img.style.display = 'block';
+    img.style.margin = '0 auto';
+    previewBody.appendChild(img);
+  }
+
+  function showPDF(url){
+    showIframe(url);
+  }
+
+  function showText(text){
+    previewBody.innerHTML = '';
+    const pre = document.createElement('pre');
+    pre.className = 'mono textout';
+    pre.textContent = text;
+    previewBody.appendChild(pre);
+  }
+
+  function prettyMaybeJSON(text){
+    try{
+      const obj = JSON.parse(text);
+      return JSON.stringify(obj, null, 2);
+    }catch(e){
+      return text;
+    }
+  }
+
+  async function handleLoad(rawInput){
+    resetUI();
+    let input = (rawInput || '').trim();
+    if(!input){
+      setStatus('bad','No input');
+      return;
+    }
+
+    let urlStr = input;
+    if(!/^([a-z]+:)?\/\//i.test(input) && !looksLikeDataURL(input)){
+      try {
+        const decoded = decodeURIComponent(input);
+        if(/^([a-z]+:)?\/\//i.test(decoded) || looksLikeDataURL(decoded)){
+          urlStr = decoded;
+        }
+      } catch(e){}
+    }
+
+    infoUrl.textContent = urlStr;
+    const codeVal = extractCode(urlStr);
+    infoCode.textContent = codeVal || '—';
+
+    if(looksLikeDataURL(urlStr)){
+      infoCType.textContent = urlStr.slice(5, urlStr.indexOf(',')) || 'data:*';
+      setStatus('ok','Loaded (data URL)');
+      if(/^data:image\//i.test(urlStr)) showImage(urlStr);
+      else if(/^data:application\/pdf/i.test(urlStr)) showPDF(urlStr);
+      else {
+        const comma = urlStr.indexOf(',');
+        const meta = urlStr.slice(5, comma);
+        const data = urlStr.slice(comma + 1);
+        const isBase64 = /;base64/i.test(meta);
+        let text = '';
+        try{
+          text = isBase64 ? atob(data) : decodeURIComponent(data);
+        }catch(e){ text = '[Unable to decode data URL payload]'; }
+        const pretty = prettyMaybeJSON(text);
+        showText(pretty);
+        raw.textContent = pretty;
+      }
+      return;
+    }
+
+    if(guessIsImage('', urlStr)){
+      setStatus('ok','Rendering image (direct)');
+      infoCType.textContent = 'image/* (guessed)';
+      showImage(urlStr);
+      return;
+    }
+    if(guessIsPDF('', urlStr)){
+      setStatus('ok','Rendering PDF (direct)');
+      infoCType.textContent = 'application/pdf (guessed)';
+      showPDF(urlStr);
+      return;
+    }
+
+    setStatus('', 'Fetching…');
+    try{
+      const res = await fetch(urlStr, { mode: 'cors' });
+      const ctype = res.headers.get('content-type') || '';
+      infoCType.textContent = ctype || 'unknown';
+
+      if(!res.ok){
+        setStatus('bad', `HTTP ${res.status}`);
+      }
+
+      if(ctype.startsWith('image/')){
+        const blob = await res.blob();
+        const src = URL.createObjectURL(blob);
+        setStatus('ok','Loaded image');
+        showImage(src);
+        raw.textContent = '';
         return;
       }
 
-      chapterCounter++; // increment chapter number
-      let chapterName = `Chapter ${chapterCounter}`;
-
-      console.log(`Loading ${chapterName}...`);
-
-      // Add chapter heading
-      let heading = document.createElement("h2");
-      heading.className = "chapter-title";
-      heading.textContent = chapterName;
-      container.appendChild(heading);
-
-      let loadedImages = 0;
-
-      for (let page = 1; page <= totalPages; page++) {
-        let img = document.createElement('img');
-        img.alt = `${chapterName} - Page ${page}`;
-        
-        let found = false;
-
-        for (let format of formats) {
-          let testSrc = `${baseUrl}${page}.${format}`;
-          let exists = await checkImageExists(testSrc);
-          
-          if (exists) {
-            img.src = testSrc;
-            container.appendChild(img);
-            imageElements.push({ chapter: chapterName, element: img });
-            loadedImages++;
-            found = true;
-            console.log(`Loaded: ${testSrc}`);
-            break;
-          }
-        }
-
-        if (!found) {
-          let errorText = document.createElement('p');
-          errorText.style.color = 'red';
-          errorText.textContent = `Image not found: ${chapterName} - Page ${page}`;
-          container.appendChild(errorText);
-          console.error(`No valid format found for ${chapterName} - Page ${page}`);
-        }
-      }
-
-      if (loadedImages === 0) {
-        alert(`No images were loaded for ${chapterName}. Please check your URL.`);
-      }
-    }
-
-    function checkImageExists(url) {
-      return new Promise((resolve) => {
-        let img = new Image();
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(false);
-        img.src = url;
-      });
-    }
-
-    async function downloadPDF() {
-      if (imageElements.length === 0) {
-        alert("No chapters loaded. Please load at least one.");
+      if(ctype.startsWith('application/pdf')){
+        setStatus('ok','Loaded PDF');
+        const blob = await res.blob();
+        const src = URL.createObjectURL(blob);
+        showPDF(src);
+        raw.textContent = '';
         return;
       }
 
-      const { jsPDF } = window.jspdf;
-      let pdf = new jsPDF('p', 'mm', 'a4');
-      let imgWidth = 210;
-      let pageHeight = 297;
+      if(ctype.includes('application/json') || ctype.startsWith('text/')){
+        const text = await res.text();
+        const pretty = prettyMaybeJSON(text);
+        setStatus('ok','Loaded text');
+        showText(pretty);
+        raw.textContent = pretty;
 
-      console.log(`Processing ${imageElements.length} images...`);
+        // --- New feature: Extract nhentai data ---
+        if (/nhentai\.net/.test(urlStr)) {
+          const gidMatch = text.match(/\/galleries\/(\d+)\//);
+          if (gidMatch) infoGallery.textContent = gidMatch[1];
 
-      for (let i = 0; i < imageElements.length; i++) {
-        let { element: img } = imageElements[i];
-
-        // Fetch the image as blob
-        let response = await fetch(img.src);
-        let blob = await response.blob();
-
-        // Convert blob to DataURL
-        let reader = new FileReader();
-        let dataURL = await new Promise(resolve => {
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-
-        // Create an image to get size ratio
-        let tempImg = new Image();
-        await new Promise(resolve => {
-          tempImg.onload = resolve;
-          tempImg.src = dataURL;
-        });
-
-        let imgHeight = (tempImg.height * imgWidth) / tempImg.width;
-
-        if (i > 0) pdf.addPage();
-        pdf.addImage(dataURL, 'JPEG', 0, 0, imgWidth, imgHeight);
+          const pagesMatch = text.match(/Pages:[\s\S]*?<span class="name">(\d+)<\/span>/);
+          if (pagesMatch) infoPages.textContent = pagesMatch[1];
+        }
+        return;
       }
 
-      pdf.save("Chapters.pdf");
-      console.log("PDF Downloaded.");
+      setStatus('', 'Unsupported type, trying iframe…');
+      showIframe(urlStr);
+    }catch(err){
+      setStatus('', 'Fetch blocked or failed, trying iframe…');
+      showIframe(urlStr);
     }
-  </script>
+  }
+
+  loadBtn.addEventListener('click', ()=>handleLoad(urlInput.value));
+  pasteBtn.addEventListener('click', async ()=>{
+    try{
+      const text = await navigator.clipboard.readText();
+      if(text){ urlInput.value = text.trim(); handleLoad(urlInput.value); }
+    }catch(e){
+      alert('Clipboard read failed. Paste manually (Ctrl/Cmd+V).');
+    }
+  });
+  urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ handleLoad(urlInput.value); } });
+
+  const sp = new URLSearchParams(location.search);
+  const auto = sp.get('link') || sp.get('url') || '';
+  if(auto){
+    urlInput.value = auto;
+    handleLoad(auto);
+  }
+})();
+</script>
 </body>
 </html>
